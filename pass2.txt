@@ -1,0 +1,244 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<unistd.h>
+
+FILE *f_mc,*f_st,*f_ic,*f_lt;
+
+typedef struct machine_code
+{
+	char address[10];
+	char mnemonic[10];
+	char operand_1[10];
+	char operand_2[10];
+}mach_code;
+
+typedef struct symbol_table
+{
+	char serial_no[10];
+	char symbol_name[10];
+	char address[10];
+	char length[10];
+	char value[10];
+}sym_tbl;
+
+typedef struct literal_table
+{
+	char serial_no[10];
+	char literal[10];
+	char address[10];	
+}lit_tbl;
+
+typedef struct intermediate_code
+{
+	char address[10];
+	char mnemonics[10];
+	char operand_1[10];
+	char operand_2[10];
+}itm_code;
+
+mach_code mc;
+sym_tbl st;
+lit_tbl lt;
+itm_code ic;
+
+int check_type(char temp_string1[10])
+{
+	if(!strcmp(temp_string1, "AD"))
+		return 1;
+	else if(!strcmp(temp_string1, "DL"))
+		return 2;
+	else if(!strcmp(temp_string1, "IS"))
+		return 3;
+	else if(!strcmp(temp_string1, "c"))
+		return 4;
+	else if(!strcmp(temp_string1, "r"))
+		return 5;
+	else if(!strcmp(temp_string1, "s"))
+		return 6;
+	else if(!strcmp(temp_string1, "l"))
+		return 7;
+	else return 0;
+}
+
+int tokenize(char temp_string1[10], char temp_string2[10], char *token)
+{
+	char str1[10]={'\0'}, str2[10]={'\0'};
+	int i, j;
+	if(!strncmp(token, "=", 1) || !strcmp(token,"*"))
+	{
+		printf("\nIn *");
+		return 0;
+	}
+	else
+	{
+		strcpy(str1,strtok(token,","));
+		strcpy(str2,strtok(NULL, ","));
+		i=1, j=0;
+		while(str1[i]!='\0')
+			temp_string1[j++]=str1[i++];
+		temp_string1[j]='\0';
+		i=0, j=0;
+		while(str2[i]!=')')
+			temp_string2[j++]=str2[i++];
+		temp_string2[j]='\0';
+	}
+	return 1;
+}	
+
+void fetch_symbol_address(char string[10], char address[10])
+{
+	fseek(f_st,0, 0);
+	printf("\nReading Symbol Table\n");
+	fscanf(f_st,"%s %s %s %s %s",&st.serial_no,&st.symbol_name, &st.address, &st.length, &st.value);
+	while(!feof(f_st))
+	{
+		printf("%s %s %s %s %s\n",st.serial_no,st.symbol_name, st.address,st.length, st.value);
+		if(!strcmp(st.serial_no,string))
+	        {
+	        	strcpy(address, st.address);
+	        	break;
+		}
+		fscanf(f_st,"%s %s %s %s %s",&st.serial_no,&st.symbol_name, &st.address, &st.length, &st.value);
+	}
+}
+
+void fetch_literal_address(char string[10], char address[10])
+{
+	printf("\nReading Literal Table\n");
+	fseek(f_lt,0, 0);
+	fscanf(f_lt,"%s %s %s",&lt.serial_no,&lt.literal, &lt.address);
+	while(!feof(f_lt))
+	{
+		printf("%s %s %s\n",lt.serial_no,lt.literal,lt.address);
+		if(!strcmp(lt.serial_no,string))
+	        {
+	        	printf("In comparison with address %d\n",lt.address );
+	        	strcpy(address, lt.address);
+	        	break;
+		}
+		fscanf(f_lt,"%s %s %s",&lt.serial_no,&lt.literal, &lt.address);
+	}
+}
+
+
+void populate_target()
+{
+	printf("%s %s %s %s\n", mc.address, mc.mnemonic, mc.operand_1, mc.operand_2);
+	fprintf(f_mc,"%10s %10s %10s %10s\n", mc.address, mc.mnemonic, mc.operand_1, mc.operand_2);
+}
+
+void process_operand(char operand[10], char address[10])
+{
+	int flag, type;
+	char temp_string1[10], temp_string2[10];
+	flag=tokenize(temp_string1, temp_string2, operand);
+	printf("%s, %s\n", temp_string1, temp_string2);
+	if(flag==1)
+	{
+		type=check_type(temp_string1);
+		printf("\nfor string %s type %d\n", temp_string1, type);
+		if(type==4 || type==5)
+			strcpy(address,temp_string2);
+		else if(type==6)
+			fetch_symbol_address(temp_string2, address);
+		else if(type==7)
+			fetch_literal_address(temp_string2, address);
+	}
+	else
+		strcpy(address,operand);
+}
+
+int main()
+{
+	int flag, type, flag1;
+	char temp_string1[10], temp_string2[10], address[10];
+	f_ic=fopen("intermediate_code.txt","r");
+	f_st=fopen("symbol_table.txt","r");
+	f_lt=fopen("literal_table.txt","r");
+	f_mc=fopen("macine_code.txt","w+");	
+	fscanf(f_ic,"%s %s %s %s",&ic.address, &ic.mnemonics, &ic.operand_1, &ic.operand_2);
+	while(!feof(f_ic))
+	{
+		printf("\nReading IC:\n");
+		printf("%s %s %s %s\n", ic.address, ic.mnemonics, &ic.operand_1, &ic.operand_2);
+		flag=tokenize(temp_string1, temp_string2, ic.mnemonics);
+		printf("%s, %s.\n", temp_string1, temp_string2);
+		if(flag==1)
+		{
+			type=check_type(temp_string1);
+			if(type==1)
+			{	printf("\nAssembly Directive Statement!!\n");
+			}
+			else if(type==2)
+			{
+				printf("\nDeclarative Statement!!\n");
+				strcpy(mc.address, "00"); strcpy(mc.mnemonic, "00"); strcpy(mc.operand_1, "00"); strcpy(mc.operand_2, "00");
+				populate_target();
+			}
+			else if(type==3)
+			{
+				printf("\nImperative Statement!!\n");
+				strcpy(mc.address, ic.address);
+				strcpy(mc.mnemonic, temp_string2);
+				process_operand(ic.operand_1, address);
+				strcpy(mc.operand_1, address);
+				process_operand(ic.operand_2, address);
+				strcpy(mc.operand_2, address);
+				populate_target();
+			}
+			else if(type==0)
+				printf("\nWrong Input in Mnemonic Field");
+		}
+		else if(flag==0)
+		{
+			strcpy(mc.address, ic.address);
+			strcpy(mc.mnemonic, ic.mnemonics);
+			strcpy(mc.operand_1, ic.operand_1);
+			strcpy(mc.operand_2, ic.operand_2);
+			populate_target();
+		}
+		fscanf(f_ic,"%s %s %s %s",&ic.address, &ic.mnemonics, &ic.operand_1, &ic.operand_2);
+	}
+	return 0;
+}
+
+INTERMEDIATE CODE:
+* (AD,01) (c,200) *
+200 (IS,02) (r,01) (l,1)
+201 (IS,05) (r,01) (s,1)
+202 (IS,03) (r,02) (l,2)
+203 (IS,06) (r,02) (s,3)
+204 (IS,09) (r,01) (s,2)
+205 (IS,07) (r,02) (l,2)
+* (AD,04) (s,4) *
+206 (IS,08) (s,5) *
+* (AD,05) (s,4) *
+* (AD,03) * *
+211 ='1' * *
+212 ='2' * *
+213 (IS,02) (r,03) (l,3)
+214 (IS,03) (r,02) (l,4)
+215 (IS,05) (r,01) (s,1)
+* (AD,03) * *
+216 ='1' * *
+217 ='5' * *
+* (AD,04) (s,7) *
+218 (DL,02) (c,20) *
+239 (DL,01) (c,30) *
+* (AD,02) * *
+
+SYMBOL TABLE:
+   1          B        213          *          *
+   2       temp        201          *          *
+   3        lab        218          *         20
+   4         T1        201          *          *
+   5          C        239         30          *
+   6        LAB        215          *          *
+   7          D        215          *          *
+
+LITERAL TABLE:
+   1       ='1'        211
+   2       ='2'        212
+   3       ='1'        216
+   4       ='5'        217

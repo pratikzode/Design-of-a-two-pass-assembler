@@ -1,0 +1,519 @@
+Source code (alp.txt)
+
+* START 100 *
+* MOVER AR =1
+* MOVEM AR =2
+* LTORG * *
+* MOVER AR B
+B DS 20 *
+X MOVER AR =2
+* PRINT C *
+* ORIGIN B+2 *
+* PRINT FD *
+* MOVER AR =1
+FD DC 1 *
+* PRINT A *
+* PRINT SS *
+SS EQU FD+5 *
+* END * *	 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Mot.txt
+
+1 START 01 AD
+2 END 02 AD
+3 LTORG 03 AD
+4 EQU 04 AD
+5 ORIGIN 05 AD
+6 DS 01 DL
+7 DC 02 DL
+8 MOVER 01 IS
+9 MOVEM 02 IS
+10 ADD 03 IS
+11 SUB 04 IS
+12 MULT 05 IS
+13 DIV 06 IS
+14 LOAD 07 IS
+15 PRINT 08 IS
+16 STOP 09 IS
+17 MOVE 10 IS
+18 READ 11 IS
+19 BC 12 IS
+20 COMP 13 IS
+21 LTR 14 IS
+22 STORE 15 IS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ass1.c
+
+#include<stdio.h>
+#include<string.h>
+
+int literal=0,symbol=0;
+typedef struct alpstruct
+{
+   char label[10];
+   char mnemonic[15];
+   char operand1[5];
+   char operand2[5];
+}line;
+
+typedef struct motstruct
+{
+   char srno[10];
+   char mnemonic[15];
+   char opcode[10];
+   char class[10];
+}mot1;
+
+typedef struct symstruct
+{
+	int srno;
+	char name[5];
+	int address;
+	int val;
+	int length;
+}sym;
+
+typedef struct litstruct
+{
+	int srno;
+	char literal[5];
+	int pool;
+}lit;
+
+void undefine()
+{
+	FILE *fpsym;
+	sym s;
+	int x;
+fpsym=fopen("symbol.txt","r");
+    fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+    while(!feof(fpsym))
+    {	x=s.address;
+    	if(x==0)
+    	{
+    		printf("\n %s is Undefined symbol",s.name);
+    		break;
+    	}
+    	fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);			
+    }	
+    fclose(fpsym);
+    
+}	//for symbol as operand2	
+
+
+void main()
+{
+   line l;
+   mot1 m;
+   sym s;
+   lit lt;
+   int val=0,length=0,address=0;
+   
+   int f=0,x;
+   char *s1,*s2;
+   int pool=0,literalcount=1,poolsrno=0,A;
+   int flag=0,flag1=0,flag2=0,flag3=0,flag4=0,loccount;
+   FILE *fpsrc,*fpdes,*motf,*fpsym,*fplit,*fpp;
+  
+   fpdes=fopen("intermediate.txt","w");
+   fclose(fpdes);
+   
+   fpsym=fopen("symbol.txt","w");
+   fclose(fpsym);
+   
+   fpsrc=fopen("alp.txt","r");
+   fscanf(fpsrc,"%s%s%s%s",l.label,l.mnemonic,l.operand1,l.operand2);
+   
+   fpp=fopen("pool.txt","w");
+   fclose(fpp);
+   fplit=fopen("literal.txt","w");
+   fclose(fplit);
+   
+   while(!feof(fpsrc))
+   {
+       printf("\n%s%s%s%s",l.label,l.mnemonic,l.operand1,l.operand2);
+       motf=fopen("mot.txt","r");
+       fpdes=fopen("intermediate.txt","a");
+       
+	   fscanf(motf,"%s%s%s%s",m.srno,m.mnemonic,m.opcode,m.class);
+       
+       while(!strcmp(l.mnemonic,m.mnemonic)==0)
+       {
+           fscanf(motf,"%s%s%s%s",m.srno,m.mnemonic,m.opcode,m.class);
+           if(feof(motf))
+           {
+           	flag=1;
+           	break;
+	   }
+         }
+        
+       if(flag==0)
+       {
+	     if(strcmp(l.mnemonic,"START")==0)
+		{
+			fprintf(fpdes," \t(%s,%s)\t(c,%s)\n",m.class,m.opcode,l.operand1);
+			loccount=atoi(l.operand1);
+			fpp=fopen("pool.txt","a");
+		 	fprintf(fpp,"%d#%d",++poolsrno,literalcount);
+		 	fclose(fpp);
+		}
+          else 
+          {
+          	if(l.label[0]!='*')
+          	 {	
+			fpsym=fopen("symbol.txt","r+");
+			fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);	
+			while(!feof(fpsym))
+		   	{	   	
+				if(strcmp(l.label,s.name)==0)
+				{
+				   	
+				   	fseek(fpsym,-6,1);
+				   	s.address=loccount;
+				   	fprintf(fpsym," %d %d %d\n",s.address,s.val,s.length);
+          	         		flag2=1;
+					break;
+				}	
+				  	fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);	
+			}
+			if(flag2==0)
+			{
+				fprintf(fpsym,"%d %5s %d %d %d\n",++symbol,l.label,loccount,val,length);
+			}
+			flag2=0;
+			fclose(fpsym);
+
+		  }
+		if(strcmp(l.mnemonic,"LTORG")==0)
+		{
+			fplit=fopen("literal.txt","r+");
+          	        fscanf(fplit,"%d%s%d",&lt.srno,lt.literal,&lt.pool);
+          	       	while(!feof(fplit))
+			{
+				if(lt.pool==pool)
+          	                {	
+					fprintf(fpdes,"%d%s\n",loccount,lt.literal);
+					fseek(fplit,-1,1);
+          	              		fprintf(fplit,"%d",loccount++);
+          	              		literalcount++;
+				}
+          	      		fscanf(fplit,"%d%s%d",&lt.srno,lt.literal,&lt.pool);
+                       	}
+                       	fpp=fopen("pool.txt","a");
+                       	fprintf(fpp,"\n%d#%d\n",++poolsrno,literalcount);
+                       	fclose(fpp);
+                       	++pool;
+          	                  	
+		}
+
+          	if(!strcmp("DS",l.mnemonic)==0)
+          	{
+          		
+          		if(l.operand1[0]!='*' && l.operand2[0]!='*')
+          		{
+				if(strcmp(l.operand1,"AR")==0)
+				fprintf(fpdes,"%d\t(%s,%s)\t(R,01)\t",loccount++,m.class,m.opcode);
+				if(strcmp(l.operand1,"BR")==0)
+				fprintf(fpdes,"%d\t(%s,%s)\t(R,02)\t",loccount++,m.class,m.opcode);
+				if(strcmp(l.operand1,"CR")==0)
+				fprintf(fpdes,"%d\t(%s,%s)\t(R,03)\t",loccount++,m.class,m.opcode);
+				if(strcmp(l.operand1,"DR")==0)
+				fprintf(fpdes,"%d\t(%s,%s)\t(R,04)\t",loccount++,m.class,m.opcode);
+				printf("%s\n",l.mnemonic);
+				if(l.operand2[0]=='=')
+				{
+				    
+				    	fplit=fopen("literal.txt","r");
+				    	fscanf(fplit,"%d%s%d",&lt.srno,lt.literal,&lt.pool);
+				    	 while(!feof(fplit))
+				    	 {
+				    	 	if(strcmp(lt.literal,l.operand2)==0 && pool==lt.pool)
+				    	 	{  
+				    	 	     fprintf(fpdes,"(L,%d)\n",lt.srno);
+				    	 	     flag4=1;
+				    	 	     break;
+						 }
+						fscanf(fplit,"%d%s%d",&lt.srno,lt.literal,&lt.pool); 
+					 }
+						 if(flag4==0)
+						 {
+						 	fclose(fplit);
+						 	fplit=fopen("literal.txt","a");
+						   	fprintf(fplit,"%d %5s %d 0\n",++literal,l.operand2,pool);
+						   	fprintf(fpdes,"(L,%d)\n",literal);
+				    	   	 	fclose(fplit);
+						 }
+						flag4=0;
+					}
+					
+          	    else
+          	       {
+          	       		/*fprintf(fpdes,"(S,%d)\n",s.srno);
+          	           	   	
+          	       		x=ifsym_present(l.operand2);
+          	       		if(x==0)
+          	       		{	
+          	       			fpsym=fopen("symbol.txt","a");
+				   	fprintf(fpsym,"%d %5s %d %d %d\n",++symbol,l.operand2,address,val,length);
+					 	
+          	       		}
+          	       		fclose(fpsym);*/
+          	           	fpsym=fopen("symbol.txt","r");
+          	           	fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+          	           	while(!feof(fpsym))
+          	           	{
+          	           	   	if(strcmp(s.name,l.operand2)==0)
+          	           	   	  {
+          	           	   	  	 fprintf(fpdes,"(S,%d)\n",s.srno);
+          	           	   	  	 flag1=1;
+          	           	   	  	 break;
+					  }
+					fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+				 }
+				 if(flag1==0)
+			   	   {
+				   	fclose(fpsym);
+				   	
+				   	fpsym=fopen("symbol.txt","a");
+				   	fprintf(fpsym,"%d %5s %d %d %d\n",++symbol,l.operand2,address,val,length);
+					fprintf(fpdes,"(S,%d)\n",symbol);
+				    }
+				   fclose(fpsym);	
+						 
+			   }
+			}//both not *
+			
+			else if(l.operand1[0]!='*' && l.operand2[0]=='*')
+			{
+			        if(strcmp(l.mnemonic,"PRINT")==0)
+				{       
+	fprintf(fpdes,"%d\t(%s,%s)\t",loccount++,m.class,m.opcode);
+					
+				        fpsym=fopen("symbol.txt","r");
+          	           		fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+          	           		while(!feof(fpsym))
+          	           		{
+          	           	   		if(strcmp(s.name,l.operand1)==0)
+          	           	   	  	{
+          	           	   	  	  fprintf(fpdes,"(S,%d)\n",s.srno);
+          	           	   	  	  flag3=1;
+          	           	   	  	  break;
+					 	 }
+						fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+				 	}
+					 if(flag3==0)
+			   	   	{
+					   	fclose(fpsym);
+					   	fpsym=fopen("symbol.txt","a");
+				                fprintf(fpsym,"%d %5s %d %d %d\n",++symbol,l.operand1,address,val,length);
+						fprintf(fpdes,"(S,%d)\n",symbol);
+				         }
+					   fclose(fpsym);	
+				
+				}//for print
+				if(strcmp(l.mnemonic,"EQU")==0)
+				{       
+					fprintf(fpdes," \t(%s,%s)\n",m.class,m.opcode);
+					s1=strtok(l.operand1,"+");
+					s2=strtok(NULL,"+");
+				   	fpsym=fopen("symbol.txt","r+");
+					fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+					while(!feof(fpsym))
+					{
+						if(strcmp(s.name,s1)==0)
+						{	if(s.address==0)
+							{
+								printf("\n %s symbol is undefined ",s.name);
+								goto exit;
+							}
+					
+							A=s.address+atoi(s2);
+							break;
+						}
+						fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+					}
+					
+					rewind(fpsym);
+					fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+					while(!feof(fpsym))
+					{
+						if(strcmp(l.label,s.name)==0)
+						{
+						        fseek(fpsym,-8,1);
+				   			fprintf(fpsym," %d %d %d\n",A,s.val,s.length);
+							break;
+						}
+						fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+					}
+					fclose(fpsym);
+
+				}//equate
+				
+				if(strcmp(l.mnemonic,"ORIGIN")==0)
+				{
+					fprintf(fpdes," \t(%s,%s)\n",m.class,m.opcode);
+					s1=strtok(l.operand1,"+");
+					s2=strtok(NULL,"+");
+					fpsym=fopen("symbol.txt","r+");
+					fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+					while(!feof(fpsym))
+					{
+						if(strcmp(s.name,s1)==0)
+						{	if(s.address==0)
+							{
+								printf("\n %s symbol is undefined ",s.name);
+								goto exit;
+							}
+							loccount=s.address+atoi(s2);
+							break;
+						}
+						fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+					}
+					fclose(fpsym);
+				}
+				if(strcmp(l.mnemonic,"DC")==0)
+				{
+				  fprintf(fpdes,"%d\t(%s,%s)\t",loccount++,m.class,m.opcode);
+				  fprintf(fpdes,"(C,%d)\n",atoi(l.operand1)); 
+				  fpsym=fopen("symbol.txt","r+");
+				  fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+				  while(!feof(fpsym))
+          	               	  {		  
+          	           	   		if(strcmp(s.name,l.label)==0)
+          	           	   	  	{
+          	           	   	  	  fseek(fpsym,-4,1);
+					   	  s.val=atoi(l.operand1);
+					   	  fprintf(fpsym," %d %d",s.val,s.length);
+					   	  break;
+ 					 	 }
+fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+			     	 }
+			     	 fclose(fpsym);
+				} 
+			}//1st is not * and 2nd is not	
+          		else
+          		{
+          		   if(strcmp(l.mnemonic,"STOP")==0)
+          		   {
+          		        fprintf(fpdes,"%d\t(%s,%s)\n",loccount++,m.class,m.opcode);
+          		   }
+          		   else if(strcmp(l.mnemonic,"END")==0)
+			   {
+          		        fprintf(fpdes,"\t(%s,%s)\n",m.class,m.opcode);
+          		        fplit=fopen("literal.txt","r+");
+          	        	fscanf(fplit,"%d%s%d",&lt.srno,lt.literal,&lt.pool);
+          	       		while(!feof(fplit))
+				{
+					if(lt.pool==pool)
+          	                	{	
+						fprintf(fpdes,"%d%s\n",loccount,lt.literal);
+						fseek(fplit,-1,1);
+          	              			fprintf(fplit,"%d",loccount++);
+          	              			literalcount++;
+					}
+          	      			fscanf(fplit,"%d%s%d",&lt.srno,lt.literal,&lt.pool);
+                       		}
+                       		
+                       		fpp=fopen("pool.txt","a");
+                       		fprintf(fpp,"%d#%d\n",++poolsrno,literalcount);
+                       		fclose(fpp);
+          		   }
+          		}//both are *			
+		       }//is not DS
+			  else if(strcmp(l.mnemonic,"DS")==0)
+			  {
+			  	fprintf(fpdes,"%d\t(%s,%s)\t(c,%s)\n",loccount++,m.class,m.opcode,l.operand1);
+				loccount=loccount-1+atoi(l.operand1);
+				fpsym=fopen("symbol.txt","r+");
+				fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);
+			  	while(!feof(fpsym))
+			  	{
+			  		if(strcmp(s.name,l.label)==0)
+			  		{
+			  		        printf("\naddress=%d",s.length);
+			  			fseek(fpsym,-2,1);
+			  			
+			  			if(atoi(l.operand1)<10)
+			  			fprintf(fpsym," %d",atoi(l.operand1));
+			  			else
+			  			fprintf(fpsym,"%d",atoi(l.operand1));
+			  			break;
+			  		}
+	fscanf(fpsym,"%d%s%d%d%d",&s.srno,s.name,&s.address,&s.val,&s.length);			  		
+			  	}
+			  }//is ds
+		  }//else for not a start instruction
+        fclose(fpdes);
+        fclose(motf);
+       }
+       else
+          {
+          	printf("\nmnemonic entry not present");
+          	break;
+          }
+       fscanf(fpsrc,"%s%s%s%s",l.label,l.mnemonic,l.operand1,l.operand2);
+   }//outer while
+    fclose(fpsrc);
+    undefine();
+exit:printf("\n");	
+}
+
+Runn:Normal
